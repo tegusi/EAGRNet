@@ -49,3 +49,16 @@ Validation
 ```
 python evaluate.py --data-dir ./dataset/Helen/ --restore-from ./snapshots/helen/best.pth --gpu 0 --batch-size 7 --input-size 473,473 --dataset test --num-classes 11
 ```
+
+## Reference
+
+If you consider use our code, please cite our paper:
+
+```
+@article{te2020edge,
+  title={Edge-aware Graph Representation Learning and Reasoning for Face Parsing},
+  author={Te, Gusi and Liu, Yinglu and Hu, Wei and Shi, Hailin and Mei, Tao},
+  journal={arXiv preprint arXiv:2007.11240},
+  year={2020}
+}
+```
