@@ -17,7 +17,7 @@ pip install -r requirements.txt
 
 ## Data
 
-You can download the Helen dataset on [https://www.sifeiliu.net/face-parsing](https://www.sifeiliu.net/face-parsing) and imagenet pretrained resent-101 from [baidu drive](https://pan.baidu.com/s/1NoxI_JetjSVa7uqgVSKdPw) or [Google drive](https://drive.google.com/open?id=1rzLU-wK6rEorCNJfwrmIu5hY2wRMyKTK), and put it into snapshot folder. We do not provide the registration code for the moment, and you need to organize input data as follows:
+You can download the **Helen** dataset on [https://www.sifeiliu.net/face-parsing](https://www.sifeiliu.net/face-parsing) nad **LaPa** dataset on [https://github.com/JDAI-CV/lapa-dataset](https://github.com/JDAI-CV/lapa-dataset) to the ./dataset folder. If you need imagenet pretrained resent-101, please download from [baidu drive](https://pan.baidu.com/s/1NoxI_JetjSVa7uqgVSKdPw) or [Google drive](https://drive.google.com/open?id=1rzLU-wK6rEorCNJfwrmIu5hY2wRMyKTK), and put it into snapshot folder. We do not provide the registration code for the moment, and you need to organize input data as follows:
 
 ```
 dataset/
@@ -55,10 +55,12 @@ python evaluate.py --data-dir ./dataset/Helen/ --restore-from ./snapshots/helen/
 If you consider use our code, please cite our paper:
 
 ```
-@article{te2020edge,
+@inproceedings{te2020edge,
   title={Edge-aware Graph Representation Learning and Reasoning for Face Parsing},
   author={Te, Gusi and Liu, Yinglu and Hu, Wei and Shi, Hailin and Mei, Tao},
-  journal={arXiv preprint arXiv:2007.11240},
-  year={2020}
+  booktitle={European Conference on Computer Vision},
+  pages={258--274},
+  year={2020},
+  organization={Springer}
 }
 ```
