@@ -16,8 +16,13 @@ pip install -r requirements.txt
 ```
 
 ## Data
+You can download original datasets without alignment:
+- **Helen** : [https://www.sifeiliu.net/face-parsing](https://www.sifeiliu.net/face-parsing)
+- **LaPa** : [https://github.com/JDAI-CV/lapa-dataset](https://github.com/JDAI-CV/lapa-dataset)
+- **CelebAMask-HQ** : [https://github.com/switchablenorms/CelebAMask-HQ](https://github.com/switchablenorms/CelebAMask-HQ)
 
-You can download the **Helen** dataset on [https://www.sifeiliu.net/face-parsing](https://www.sifeiliu.net/face-parsing), **LaPa** dataset on [https://github.com/JDAI-CV/lapa-dataset](https://github.com/JDAI-CV/lapa-dataset) and **CelebAMask-HQ** [https://github.com/switchablenorms/CelebAMask-HQ](https://github.com/switchablenorms/CelebAMask-HQ) to the ./dataset folder. If you need imagenet pretrained resent-101, please download from [baidu drive](https://pan.baidu.com/s/1NoxI_JetjSVa7uqgVSKdPw) or [Google drive](https://drive.google.com/open?id=1rzLU-wK6rEorCNJfwrmIu5hY2wRMyKTK), and put it into snapshot folder. We do not provide the registration code for the moment, and you need to organize input data as follows:
+and put them in ./dataset folder.
+If you need imagenet pretrained resent-101, please download from [baidu drive](https://pan.baidu.com/s/1NoxI_JetjSVa7uqgVSKdPw) or [Google drive](https://drive.google.com/open?id=1rzLU-wK6rEorCNJfwrmIu5hY2wRMyKTK), and put it into snapshot folder. We do not provide the registration code for the moment, and you need to organize input data as follows:
 
 ```
 dataset/
@@ -64,3 +69,7 @@ If you consider use our code, please cite our paper:
   organization={Springer}
 }
 ```
+
+## Acknowledgement
+
+Thanks [@lucia123](https://github.com/lucia123) and her work [A New Dataset and Boundary-Attention Semantic Segmentation for Face Parsing](https://aaai.org/ojs/index.php/AAAI/article/view/6832/6686) in AAAI, 2020.
