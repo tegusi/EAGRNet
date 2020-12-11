@@ -17,7 +17,7 @@ pip install -r requirements.txt
 
 ## Data
 
-You can download the **Helen** dataset on [https://www.sifeiliu.net/face-parsing](https://www.sifeiliu.net/face-parsing) nad **LaPa** dataset on [https://github.com/JDAI-CV/lapa-dataset](https://github.com/JDAI-CV/lapa-dataset) to the ./dataset folder. If you need imagenet pretrained resent-101, please download from [baidu drive](https://pan.baidu.com/s/1NoxI_JetjSVa7uqgVSKdPw) or [Google drive](https://drive.google.com/open?id=1rzLU-wK6rEorCNJfwrmIu5hY2wRMyKTK), and put it into snapshot folder. We do not provide the registration code for the moment, and you need to organize input data as follows:
+You can download the **Helen** dataset on [https://www.sifeiliu.net/face-parsing](https://www.sifeiliu.net/face-parsing), **LaPa** dataset on [https://github.com/JDAI-CV/lapa-dataset](https://github.com/JDAI-CV/lapa-dataset) and **CelebAMask-HQ**[https://github.com/switchablenorms/CelebAMask-HQ](https://github.com/switchablenorms/CelebAMask-HQ) to the ./dataset folder. If you need imagenet pretrained resent-101, please download from [baidu drive](https://pan.baidu.com/s/1NoxI_JetjSVa7uqgVSKdPw) or [Google drive](https://drive.google.com/open?id=1rzLU-wK6rEorCNJfwrmIu5hY2wRMyKTK), and put it into snapshot folder. We do not provide the registration code for the moment, and you need to organize input data as follows:
 
 ```
 dataset/
