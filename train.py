@@ -12,12 +12,13 @@ import torch.distributed as dist
 import os
 import os.path as osp
 from networks.EAGR import EAGRNet
-from dataset.datasets import HelenDataSet
+from networks.AGRNet import AGRNet
+from dataset.datasets import HelenDataSet, LapaDataset, CelebAMaskHQDataSet, LIPDataSet
 import torchvision.transforms as transforms
 import timeit
 from tensorboardX import SummaryWriter
 from utils.utils import decode_parsing, inv_preprocess, SingleGPU
-from utils.criterion import CriterionAll, CriterionCrossEntropyEdgeParsing_boundary_attention_loss
+from utils.criterion import CriterionAll, CriterionCrossEntropyEdgeParsing_boundary_eagrnet_loss, CriterionCrossEntropyEdgeParsing_boundary_agrnet_loss
 from utils.encoding import DataParallelModel, DataParallelCriterion 
 from utils.miou import compute_mean_ioU
 from evaluate import valid
@@ -25,21 +26,21 @@ from datetime import datetime
 from torch.utils.data.distributed import DistributedSampler
 from inplace_abn import InPlaceABN, InPlaceABNSync
 
-TIMESTAMP = "helen"+"{0:%Y-%m-%dT%H-%M-%S/}".format(datetime.now())
 import matplotlib.pyplot as plt
 
 start = timeit.default_timer()
   
 BATCH_SIZE = 8
-DATA_DIRECTORY = './datasets/Helen'
+DATA_DIRECTORY = 'celebahq'
+DATA_LIST_PATH = './dataset/list/celebahq/train.lst'
 IGNORE_LABEL = 255
 INPUT_SIZE = '473,473'
 LEARNING_RATE = 1e-3
 MOMENTUM = 0.9
-NUM_CLASSES = 11
+NUM_CLASSES = 20
 POWER = 0.9
 RANDOM_SEED = 1234
-RESTORE_FROM = './snapshots/resnet101-imagenet.pth'
+RESTORE_FROM = './dataset/MS_DeepLab_resnet_pretrained_init.pth'
 SAVE_NUM_IMAGES = 2
 SAVE_PRED_EVERY = 10000
 SNAPSHOT_DIR = './snapshots/'
@@ -76,11 +77,7 @@ def get_arguments():
     parser.add_argument("--momentum", type=float, default=MOMENTUM,
                         help="Momentum component of the optimiser.")
     parser.add_argument("--num-classes", type=int, default=NUM_CLASSES,
-                        help="Number of classes to predict (including background).") 
-    parser.add_argument("--start-iters", type=int, default=0,
-                        help="Number of classes to predict (including background).")
-    parser.add_argument("--test-fre", type=int, default=1,
-                        help="Number of classes to predict (including background).")                                            
+                        help="Number of classes to predict (including background).")                                    
     parser.add_argument("--power", type=float, default=POWER,
                         help="Decay parameter to compute the learning rate.")
     parser.add_argument("--weight-decay", type=float, default=WEIGHT_DECAY,
@@ -101,17 +98,28 @@ def get_arguments():
                         help="choose gpu device.")
     parser.add_argument("--start-epoch", type=int, default=0,
                         help="choose the number of recurrence.")
-    parser.add_argument("--epochs", type=int, default=150,
+    parser.add_argument("--epochs", type=int, default=250,
                         help="choose the number of recurrence.")
     parser.add_argument("--local_rank", type=int, default=0,
                         help="choose gpu numbers") 
     parser.add_argument('--dist-backend', default='nccl', type=str,
                         help='distributed backend')
+    parser.add_argument('--type', default='Helen', type=str,
+                        help='type of dataset')
+    parser.add_argument('--l1', default=1, type=float,
+                        help='Loss weight of lambda 1')
+    parser.add_argument('--l2', default=1, type=float,
+                        help='Loss weight of lambda 2')
+    parser.add_argument('--l3', default=1, type=float,
+                        help='Loss weight of lambda 3')
+    parser.add_argument('--l4', default=0.5, type=float,
+                        help='Loss weight of lambda 4')
     return parser.parse_args()
 
 
 args = get_arguments()
 
+TIMESTAMP = args.type + "{0:%Y-%m-%dT%H-%M-%S/}".format(datetime.now())
 
 def lr_poly(base_lr, iter, max_iter, power):
     return base_lr * ((1 - float(iter) / max_iter) ** (power))
@@ -179,6 +187,42 @@ def main():
 
     writer = SummaryWriter(osp.join(args.snapshot_dir, TIMESTAMP)) if rank == 0 else None
 
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
+
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        normalize,
+    ])
+    if args.type == 'Helen':
+        train_dataset = HelenDataSet('dataset/Helen_align_with_hair', args.dataset, crop_size=input_size, transform=transform)
+        val_dataset = HelenDataSet('dataset/Helen_align_with_hair', 'test', crop_size=input_size, transform=transform)
+        args.num_classes = 11
+    elif args.type == 'LaPa':
+        train_dataset = LapaDataset('dataset/LaPa/origin', args.dataset, crop_size=input_size, transform=transform)
+        val_dataset = LapaDataset('dataset/LaPa/origin', 'test', crop_size=input_size, transform=transform)
+        args.num_classes = 11
+    elif args.type == 'Celeb':    
+        train_dataset = CelebAMaskHQDataSet('dataset/CelebAMask-HQ', args.dataset, crop_size=input_size, transform=transform)
+        val_dataset = CelebAMaskHQDataSet('dataset/CelebAMask-HQ', 'test', crop_size=input_size, transform=transform)
+        args.num_classes = 19
+    elif args.type == 'LIP':
+        train_dataset = LIPDataSet('dataset/LIP', args.dataset, crop_size=input_size, transform=transform)
+        val_dataset = LIPDataSet('dataset/LIP', 'val', crop_size=input_size, transform=transform)
+        args.num_classes = 20
+
+    if distributed:
+        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+    else:
+        train_sampler = None
+    trainloader = data.DataLoader(train_dataset, batch_size=args.batch_size , shuffle=False, num_workers=2,
+                                  pin_memory=True, drop_last=True, sampler=train_sampler)
+
+    num_samples = len(val_dataset)
+    
+    valloader = data.DataLoader(val_dataset, batch_size=args.batch_size,
+                                 shuffle=False, pin_memory=True, drop_last=False)
+
     cudnn.enabled = True
     # cudnn related setting
     cudnn.benchmark = True
@@ -186,11 +230,12 @@ def main():
     torch.backends.cudnn.enabled = True
  
     if distributed:
-        model = EAGRNet(args.num_classes)
+        model = AGRNet(args.num_classes)
     else:
-        model = EAGRNet(args.num_classes, InPlaceABN)
+        model = AGRNet(args.num_classes, InPlaceABN)
+        
     if args.restore_from is not None:
-        model.load_state_dict(torch.load(args.restore_from), True)
+        model.load_state_dict(torch.load(args.restore_from, map_location='cuda:{}'.format(args.local_rank)), True)
     else:
         resnet_params = torch.load(os.path.join(args.snapshot_dir, 'resnet101-imagenet.pth'))
         new_params = model.state_dict().copy()
@@ -208,29 +253,9 @@ def main():
     else:
         model = SingleGPU(model)
 
-    criterion = CriterionCrossEntropyEdgeParsing_boundary_attention_loss(loss_weight=[1, 1, 4])
+    # CriterionCrossEntropyEdgeParsing_boundary_agrnet_loss for AGRNet, CriterionCrossEntropyEdgeParsing_boundary_eagrnet_loss for EAGRNet
+    criterion = CriterionCrossEntropyEdgeParsing_boundary_agrnet_loss(loss_weight=[args.l1, args.l2, args.l3, args.l4], num_classes=args.num_classes)
     criterion.cuda()
-
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
-
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        normalize,
-    ])
-    
-    train_dataset = HelenDataSet(args.data_dir, args.dataset, crop_size=input_size, transform=transform)
-    if distributed:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
-    else:
-        train_sampler = None
-    trainloader = data.DataLoader(train_dataset, batch_size=args.batch_size , shuffle=False, num_workers=2,
-                                  pin_memory=True, drop_last=True, sampler=train_sampler)
-    val_dataset = HelenDataSet(args.data_dir, 'test', crop_size=input_size, transform=transform)
-    num_samples = len(val_dataset)
-    
-    valloader = data.DataLoader(val_dataset, batch_size=args.batch_size ,
-                                 shuffle=False, pin_memory=True, drop_last=False)
 
     optimizer = optim.SGD(
         model.parameters(),
@@ -300,19 +325,21 @@ def main():
     
                 print('iter = {} of {} completed, loss = {}'.format(i_iter, total_iters, loss.data.cpu().numpy()))
         if not dist.is_initialized() or dist.get_rank() == 0:
-            torch.save(model.module.state_dict(), osp.join(args.snapshot_dir, TIMESTAMP, 'epoch_' + str(epoch) + '.pth'))
+            save_path =  os.path.join(args.data_dir, TIMESTAMP)
+            if not os.path.exists(save_path):
+                os.makedirs(save_path)
+            parsing_preds, scales, centers = valid(model, valloader, input_size, num_samples, osp.join(args.snapshot_dir, save_path))
+            mIoU, f1 = compute_mean_ioU(parsing_preds, scales, centers, args.num_classes, val_dataset, input_size, 'test', True, type=args.type)
+            if f1['mean'] > best_f1:    
+                torch.save(model.module.state_dict(), osp.join(args.snapshot_dir, TIMESTAMP, 'best.pth'))
+                best_f1 = f1['mean']
+            print(mIoU)
+            print(f1)
+            writer.add_scalars('mIoU', mIoU, epoch)
+            writer.add_scalars('f1', f1, epoch)
 
             if epoch % args.test_fre == 0:
-                parsing_preds, scales, centers = valid(model, valloader, input_size, num_samples)
-                mIoU, f1 = compute_mean_ioU(parsing_preds, scales, centers, args.num_classes, args.data_dir, input_size, 'test', True)
-                if f1['overall'] > best_f1:
-                    torch.save(model.module.state_dict(), osp.join(args.snapshot_dir, TIMESTAMP, 'best.pth'))
-                    best_f1 = f1['overall']
-                print(mIoU)
-                print(f1)
-                writer.add_scalars('mIoU', mIoU, epoch)
-                writer.add_scalars('f1', f1, epoch)
-
+                torch.save(model.module.state_dict(), osp.join(args.snapshot_dir, TIMESTAMP, 'epoch_' + str(epoch) + '.pth'))
 
     end = timeit.default_timer()
     print(end - start, 'seconds')
