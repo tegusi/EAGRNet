@@ -1,6 +1,6 @@
 # Edge-aware Graph Representation Learning and Reasoning for Face Parsing
 
-The official repository of *Edge-aware Graph Representation Learning and Reasoning for Face Parsing (ECCV 2020)*. 
+The official repository of *Edge-aware Graph Representation Learning and Reasoning for Face Parsing (ECCV 2020)* and *AGRNet: Adaptive Graph Representation Learning and Reasoning for Face Parsing (TIP 2021)*. 
 
 
 ## Installation
@@ -21,7 +21,7 @@ You can download original datasets without alignment:
 - **LaPa** : [https://github.com/JDAI-CV/lapa-dataset](https://github.com/JDAI-CV/lapa-dataset)
 - **CelebAMask-HQ** : [https://github.com/switchablenorms/CelebAMask-HQ](https://github.com/switchablenorms/CelebAMask-HQ)
 
-and put them in ./dataset folder.
+and put them in `./dataset` folder.
 If you need imagenet pretrained resent-101, please download from [baidu drive](https://pan.baidu.com/s/1NoxI_JetjSVa7uqgVSKdPw) or [Google drive](https://drive.google.com/open?id=1rzLU-wK6rEorCNJfwrmIu5hY2wRMyKTK), and put it into snapshot folder. We do not provide the registration code for the moment, and you need to organize input data as follows:
 
 ```
@@ -38,7 +38,7 @@ Besides, we provide the edge genearation code in the *generate_edge.py*.
 
 ## Usage
 
-We support single-gpu and multi-gpu training. Inplace-abn requires pytorch distributed data parallel.
+We support single-gpu and multi-gpu training. Inplace-abn requires pytorch distributed data parallel. And you can switch between the model between EAGRNet and AGRNet in `train.py`.
 
 Single gpu training
 ```
@@ -67,6 +67,16 @@ If you consider use our code, please cite our paper:
   pages={258--274},
   year={2020},
   organization={Springer}
+}
+
+@article{te2021agrnet,
+  title={Agrnet: Adaptive graph representation learning and reasoning for face parsing},
+  author={Te, Gusi and Hu, Wei and Liu, Yinglu and Shi, Hailin and Mei, Tao},
+  journal={IEEE Transactions on Image Processing},
+  volume={30},
+  pages={8236--8250},
+  year={2021},
+  publisher={IEEE}
 }
 ```
 
